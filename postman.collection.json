@@ -1,0 +1,277 @@
+{
+  "info": {
+    "name": "CS2 Platform — WeaponPaints",
+    "_postman_id": "cs2-platform-weaponpaints",
+    "description": "REST endpoints for the WeaponPaints module.\n\n### Team codes (`weaponTeam`)\n- `0` — applies to both teams (default)\n- `2` — Terrorist\n- `3` — Counter-Terrorist\n\n### Variables\n- `baseUrl` — API base URL (default `http://localhost:3000/api`)\n- `jwt` — player JWT (from `GET /auth/me` or the Steam OpenID flow)\n- `adminJwt` — JWT of a user whose `isAdmin` flag is true\n\nAll player endpoints require the `jwt` bearer token. The `Admin` folder uses `adminJwt`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000/api" },
+    { "key": "jwt", "value": "" },
+    { "key": "adminJwt", "value": "" }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [{ "key": "token", "value": "{{jwt}}", "type": "string" }]
+  },
+  "item": [
+    {
+      "name": "Catalog",
+      "description": "Read-only access to the synced CS2 item catalog stored in PostgreSQL (`wp_catalog_*` tables). Populated by `POST /admin/weaponpaints/sync`.",
+      "item": [
+        {
+          "name": "Version",
+          "request": {
+            "method": "GET",
+            "description": "Returns the timestamp of the last successful admin catalog sync, or `null` if the catalog has never been synced.",
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/catalog/version",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "catalog", "version"]
+            }
+          }
+        },
+        {
+          "name": "Skins",
+          "request": {
+            "method": "GET",
+            "description": "Lists weapon skins (non-knife, non-glove). Both query params are optional.\n\n- `weaponName` — filter to a specific weapon display name (e.g. `AK-47`).\n- `query` — free-text match against the skin name.",
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/catalog/skins?weaponName=AK-47&query=redline",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "catalog", "skins"],
+              "query": [
+                { "key": "weaponName", "value": "AK-47", "disabled": true },
+                { "key": "query", "value": "redline", "disabled": true }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Agents",
+          "request": {
+            "method": "GET",
+            "description": "Lists agent models. Optional `team` query filter accepts plugin-style codes (`T`, `CT`, or `Any`).",
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/catalog/agents?team=CT",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "catalog", "agents"],
+              "query": [{ "key": "team", "value": "CT", "disabled": true }]
+            }
+          }
+        },
+        {
+          "name": "Gloves",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/catalog/gloves",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "catalog", "gloves"]
+            }
+          }
+        },
+        {
+          "name": "Knives",
+          "request": {
+            "method": "GET",
+            "description": "Lists knife skins. Each entry includes `weaponEntity` (e.g. `weapon_knife_butterfly`) which is the value to send as the `knife` body field when equipping.",
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/catalog/knives",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "catalog", "knives"]
+            }
+          }
+        },
+        {
+          "name": "Music",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/catalog/music",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "catalog", "music"]
+            }
+          }
+        },
+        {
+          "name": "Pins",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/catalog/pins",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "catalog", "pins"]
+            }
+          }
+        },
+        {
+          "name": "Stickers",
+          "request": {
+            "method": "GET",
+            "description": "Lists stickers. Optional `query` param performs a free-text match against the sticker name.",
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/catalog/stickers?query=katowice",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "catalog", "stickers"],
+              "query": [{ "key": "query", "value": "katowice", "disabled": true }]
+            }
+          }
+        },
+        {
+          "name": "Keychains",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/catalog/keychains",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "catalog", "keychains"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Loadout",
+      "description": "Authenticated per-player loadout operations. Writes go to the shared MySQL `wp_player_*` tables that the cs2-WeaponPaints plugin reads at connect time. Equip endpoints upsert by `(steamid, weapon_team[, weapon_defindex])`.",
+      "item": [
+        {
+          "name": "Get Loadout",
+          "request": {
+            "method": "GET",
+            "description": "Returns the authenticated player's full loadout across all `wp_player_*` tables: `{ skins, agents, gloves, knives, music, pins }`.",
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/loadout",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "loadout"]
+            }
+          }
+        },
+        {
+          "name": "Equip Skin",
+          "request": {
+            "method": "PUT",
+            "description": "Upsert a paint on one weapon slot (keyed by `weaponTeam` + `weaponDefindex`).\n\nRequired: `weaponDefindex`, `weaponPaintId`.\nOptional: `weaponTeam` (default `0`), `weaponWear` (default `0.000001`), `weaponSeed` (default `0`), `weaponNametag` (string or null), `weaponStattrak` (`0`/`1`), `weaponStattrakCount`, `weaponSticker0..4` (`id;schema;x;y;wear;scale;rotation` — default `0;0;0;0;0;0;0`), `weaponKeychain` (`id;x;y;z;seed` — default `0;0;0;0;0`).",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weaponTeam\": 0,\n  \"weaponDefindex\": 7,\n  \"weaponPaintId\": 282,\n  \"weaponWear\": 0.01,\n  \"weaponSeed\": 0,\n  \"weaponStattrak\": 0,\n  \"weaponStattrakCount\": 0,\n  \"weaponNametag\": null,\n  \"weaponSticker0\": \"0;0;0;0;0;0;0\",\n  \"weaponSticker1\": \"0;0;0;0;0;0;0\",\n  \"weaponSticker2\": \"0;0;0;0;0;0;0\",\n  \"weaponSticker3\": \"0;0;0;0;0;0;0\",\n  \"weaponSticker4\": \"0;0;0;0;0;0;0\",\n  \"weaponKeychain\": \"0;0;0;0;0\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/loadout/skin",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "loadout", "skin"]
+            }
+          }
+        },
+        {
+          "name": "Equip Knife",
+          "request": {
+            "method": "PUT",
+            "description": "Sets the player's chosen knife entity per team.\n\nRequired: `knife` (weapon entity class name, e.g. `weapon_knife_butterfly` — use the `weaponEntity` value from `GET /catalog/knives`).\nOptional: `weaponTeam` (default `0`).\n\nPaint/seed/wear for the knife are customised separately via `PUT /loadout/skin` using the knife's `weaponDefindex`.",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weaponTeam\": 0,\n  \"knife\": \"weapon_knife_butterfly\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/loadout/knife",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "loadout", "knife"]
+            }
+          }
+        },
+        {
+          "name": "Equip Glove",
+          "request": {
+            "method": "PUT",
+            "description": "Sets the player's glove defindex per team.\n\nRequired: `weaponDefindex`.\nOptional: `weaponTeam` (default `0`).\n\nGlove paint/seed/wear (if supported) are customised via `PUT /loadout/skin` using the glove's defindex.",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weaponTeam\": 0,\n  \"weaponDefindex\": 5027\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/loadout/glove",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "loadout", "glove"]
+            }
+          }
+        },
+        {
+          "name": "Equip Agent",
+          "request": {
+            "method": "PUT",
+            "description": "Sets the CT and/or T agent models for the player. One row per `steamid`; send whichever fields you want to update (omit or pass `null` to clear a side).\n\nOptional: `agentCt`, `agentT` (agent model strings, e.g. `ctm_fbi_variantf`).",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"agentCt\": \"ctm_fbi_variantf\",\n  \"agentT\": \"tm_phoenix_variantf\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/loadout/agent",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "loadout", "agent"]
+            }
+          }
+        },
+        {
+          "name": "Equip Music",
+          "request": {
+            "method": "PUT",
+            "description": "Sets the player's music kit per team.\n\nRequired: `musicId`.\nOptional: `weaponTeam` (default `0`).",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weaponTeam\": 0,\n  \"musicId\": 3\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/loadout/music",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "loadout", "music"]
+            }
+          }
+        },
+        {
+          "name": "Equip Pin",
+          "request": {
+            "method": "PUT",
+            "description": "Sets the player's collectible pin (coin) per team.\n\nRequired: `pinId`.\nOptional: `weaponTeam` (default `0`).",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"weaponTeam\": 0,\n  \"pinId\": 10\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/weaponpaints/loadout/pin",
+              "host": ["{{baseUrl}}"],
+              "path": ["weaponpaints", "loadout", "pin"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin",
+      "description": "Admin-only operations. Requires a JWT belonging to a user with `isAdmin = true`.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [{ "key": "token", "value": "{{adminJwt}}", "type": "string" }]
+      },
+      "item": [
+        {
+          "name": "Sync Catalog",
+          "request": {
+            "method": "POST",
+            "description": "Fetches the latest CS2 item data from ByMykel/CSGO-API (`inventory.json`) and refreshes every `wp_catalog_*` table in PostgreSQL. Safe to run repeatedly — tables are cleared and re-populated in a single pass.",
+            "url": {
+              "raw": "{{baseUrl}}/admin/weaponpaints/sync",
+              "host": ["{{baseUrl}}"],
+              "path": ["admin", "weaponpaints", "sync"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

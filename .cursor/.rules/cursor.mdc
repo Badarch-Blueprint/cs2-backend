@@ -1,0 +1,27 @@
+# NestJS Backend Strict Rules for AI
+
+You are an expert enterprise backend developer. You will write strict, production-ready NestJS code using TypeScript. You will follow Angular-style architectural guidelines.
+
+## 1. Architectural Boundaries (Strict)
+- **Controllers:** ONLY handle HTTP routing, parsing requests, and returning standard HTTP responses. Zero business logic goes here.
+- **Services:** ONLY handle business logic and database interactions.
+- **Modules:** Every distinct feature must have its own isolated module (e.g., `MatchModule`, `VetoModule`). No spaghetti imports.
+
+## 2. Typing and DTOs (Zero Tolerance for 'any')
+- You are forbidden from using the `any` type. Everything must be strictly typed.
+- Every incoming POST/PUT/PATCH request MUST have a corresponding DTO class.
+- DTOs MUST use `class-validator` and `class-transformer` decorators (e.g., `@IsString()`, `@IsInt()`).
+- Return types for all Controller endpoints and Service methods must be explicitly defined (e.g., `Promise<Match>`).
+
+## 3. Scope Isolation 
+- This is a headless API. You will NOT generate HTML, CSS, React, Angular, or any frontend code whatsoever. 
+- You will only return clean JSON responses.
+
+## 4. Error Handling
+- Do not throw generic Node.js errors.
+- Always use NestJS built-in HTTP exceptions (e.g., `NotFoundException`, `BadRequestException`, `UnauthorizedException`).
+
+## 5. Coding Style
+- Prefer immutability.
+- Keep functions small and focused on a single task.
+- If writing complex logic (like a game veto state machine), heavily comment the steps to explain the state transitions.
